@@ -1,0 +1,137 @@
+---
+title: "visualitzacio practica part 2 Marc"
+author: "Marc Clemente Coral"
+date: "13-01-2026"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(viridis)
+library(scales)
+```
+
+```{r}
+# llegim df
+data <- read.csv("vgsales_modificat.csv")
+df <- data
+
+# filtrem jocs abans del 2017 i no descartem els que tenen NA a l'any
+df <- df %>%
+  filter(is.na(Year) | Year < 2017)
+```
+
+```{r}
+# gràfica de quants jocs hi ha per any
+df_year <- df %>%
+  filter(!is.na(Year)) %>%
+  group_by(Year) %>%
+  summarise(num_jocs = n(), .groups = "drop")
+
+ggplot(df_year, aes(x = Year, y = num_jocs)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_point(color = "steelblue") +
+  scale_x_continuous(
+    breaks = c(seq(min(df_year$Year), max(df_year$Year), by = 10), max(df_year$Year))
+  ) +
+  theme_minimal() +
+  labs(title = "Nombre de jocs publicats per any",
+       x = "Any",
+       y = "Nombre de jocs")
+```
+
+
+
+```{r}
+# gràfic de nombre de videojocs per gènere i any
+df_year_genre <- df %>%
+  group_by(Year, Genre) %>%
+  summarise(num_jocs = n(), .groups = "drop")
+
+ggplot(df_year_genre, aes(x = Year, y = num_jocs, color = Genre)) +
+  geom_line(size = 1) +
+  scale_color_viridis_d(option = "turbo") +
+  theme_minimal() +
+  labs(
+    title = "Nombre de jocs publicats per any segons el gènere",
+    x = "Any de publicació",
+    y = "Nombre de jocs",
+    color = "Gènere"
+  )
+```
+
+
+
+```{r}
+# gràfic de barres apilades i normalitzades de percentatge de copies venudes per regions
+
+df_genre_sales <- df %>%
+  group_by(Genre) %>%
+  summarise(
+    NA_ = sum(NA_Sales, na.rm = TRUE),
+    EU = sum(EU_Sales, na.rm = TRUE),
+    JP = sum(JP_Sales, na.rm = TRUE),
+    Other = sum(Other_Sales, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+df_genre_sales_long <- df_genre_sales %>%
+  pivot_longer(
+    cols = c(NA_, EU, JP, Other),
+    names_to = "Region",
+    values_to = "Vendes_milions"
+  )
+
+ggplot(df_genre_sales_long, aes(x = Region, y = Vendes_milions, fill = Genre)) +
+  geom_col(position = "fill") +
+  scale_fill_viridis_d(option = "turbo") +
+  theme_minimal() +
+  labs(
+    title = "Percentatge de còpies venudes per gènere segons la regió",
+    x = "Regió",
+    y = "Percentatge de vendes",
+    fill = "Gènere"
+  )
+```
+
+```{r}
+# diagrama de caixes múltiples sense japó
+
+df_box_noJP <- df %>%
+  mutate(Global_noJP = NA_Sales + EU_Sales + Other_Sales)
+
+ggplot(df_box_noJP, aes(x = Genre, y = Global_noJP, fill = Genre)) +
+  geom_boxplot() +
+  scale_y_log10(labels = comma_format()) +
+  scale_fill_viridis_d(option = "turbo") +
+  theme_minimal() +
+  labs(
+    title = "Vendes a la resta del món segons el gènere",
+    x = "",
+    y = "Vendes a la resta del món (milions de còpies)",
+    fill = "Gènere"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r}
+# diagrama de caixes múltiples només de japó
+
+ggplot(df_box_noJP, aes(x = Genre, y = JP_Sales, fill = Genre)) +
+  geom_boxplot() +
+  scale_y_log10(labels = comma_format()) +
+  scale_fill_viridis_d(option = "turbo") +
+  theme_minimal() +
+  labs(
+    title = "Vendes a Japó segons el gènere",
+    x = "",
+    y = "Vendes a Japó (milions de còpies)",
+    fill = "Gènere"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
